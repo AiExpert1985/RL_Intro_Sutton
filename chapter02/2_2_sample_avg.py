@@ -13,52 +13,50 @@ class Bandit:
         return self.rewards[arm][timestep]
 
 
-def fig_2_1(k=10):
-    bandits = np.random.randn(k)
-    rewards = [np.random.normal(q_start, 1, 10000) for q_start in bandits]
-    fig, ax = plt.subplots(1, 1, figsize=(10, 5))
-    ax.violinplot(rewards)
-    ax.set_title("10-armed Testbed")
-    ax.set_xlabel("Action")
-    ax.set_xticks(range(0, 11, 1))
-    ax.set_ylabel("Reward Distribution")
-    # plt.show()
-    plt.savefig('images/fig_2_1.png')
-
-
-def run(n_tries=2000, n_timesteps=1000, n_arms=10, e=0.0):
+def simulate(n_tries=2000, n_timesteps=1000, n_arms=10, e=0.0):
     rewards = np.zeros((n_tries, n_timesteps))
+    is_optimal = np.zeros((n_tries, n_timesteps))
+    optimal_rewards = []
     for t in tqdm(range(n_tries)):
         bandit = Bandit(n_timesteps, n_arms)
         q_estimated = np.zeros(n_arms)
         action_rewards = [[] for _ in range(n_arms)]
+        optimal_action = np.argmax(bandit.q_true)
+        optimal_rewards.append(np.max(bandit.q_true))
         for i in range(n_timesteps):
-            max_val = np.max(q_estimated)
             if np.random.rand() < e:
                 action = np.random.choice(bandit.arms)
             else:
+                max_val = np.max(q_estimated)
                 action = np.random.choice(np.where(q_estimated == max_val)[0])
             r = bandit.reward(action, i)
             action_rewards[action].append(r)
             q_estimated[action] = np.mean(action_rewards[action])
             rewards[t][i] = r
-    return rewards
+            if action == optimal_action:
+                is_optimal[t][i] = 1
+    print(np.mean(optimal_rewards))
+    return rewards, is_optimal
 
 
 def fig_2_2():
-    for e in [0.0, 0.01, 0.1]:
-        print('e =', e)
-        result = run(e=e)
+    fig, ax = plt.subplots(2, 1, figsize=(10, 10))
+    epsilons = [0, 0.01, 0.1]
+    for e in epsilons:
+        result, is_optimal = simulate(e=e)
         rewards_mean = np.mean(result, axis=0)
-        fig, ax = plt.subplots(1, 1, figsize=(10, 10))
-        ax.plot(rewards_mean)
-    plt.show()
+        optimal_selection = np.mean(is_optimal, axis=0)
+        ax[0].plot(rewards_mean, label=f'epsilon = {e}')
+        ax[1].plot(optimal_selection, label=f'epsilon = {e}')
+    ax[0].legend()
+    ax[1].legend()
+    # plt.show()
+    plt.savefig('images/fig_2_2.png')
 
-def main(k):
-    # fig_2_1()
+def run(k):
     fig_2_2()
 
 
 if __name__ == '__main__':
     num_bandits = 10
-    main(num_bandits)
+    run(num_bandits)

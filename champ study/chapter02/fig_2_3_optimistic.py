@@ -27,8 +27,8 @@ def simulate(n_bandits=2000, n_timesteps=1000, n_arms=10, e=0.0, alpha=0.1, init
     for b in tqdm(range(n_bandits)):
         bandit = Bandit(n_timesteps, n_arms)
         Q = np.ones(n_arms) * 5 if init_type == 'optimistic' else np.zeros(n_arms)
+        optimal_action = np.argmax(bandit.q)
         for t in range(n_timesteps):
-            optimal_action = np.argmax(bandit.q)
             if np.random.rand() < e:
                 action = np.random.choice(bandit.arms)
             else:

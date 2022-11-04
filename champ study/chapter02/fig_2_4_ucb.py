@@ -12,39 +12,35 @@ from tqdm import tqdm
 
 
 class Bandit:
-    def __init__(self, n_timesteps, n_arms):
+    def __init__(self, n_arms, n_timesteps):
         self.arms = list(range(n_arms))
         self.q = np.random.normal(loc=0, scale=1, size=10)
+        self.rewards = [np.random.normal(q, 1, n_timesteps) for q in self.q]
 
-    def reward(self, arm):
-        return np.random.normal(self.q[arm], 1)
+    def reward(self, arm, timestep):
+        return self.rewards[arm][timestep]
 
 
-def simulate(n_bandits=2000, n_timesteps=1000, n_arms=10, e=0.1, alpha=0.1, act_type="e-greedy", c=2.0):
+def simulate(n_bandits=2000, n_timesteps=1000, n_arms=10, e=0.1, alpha=0.1, act_type="ucb", c=2.0):
     reward_grid = np.zeros((n_bandits, n_timesteps))
     optimality_grid = np.zeros((n_bandits, n_timesteps))
     for b in tqdm(range(n_bandits)):
-        bandit = Bandit(n_timesteps, n_arms)
+        bandit = Bandit(n_arms, n_timesteps)
         optimal_action = np.argmax(bandit.q)
         Q = np.zeros(n_arms)
-        N = np.zeros(n_arms)
-        for t in range(1, n_timesteps + 1):
-            if act_type == "e-greedy":
-                if np.random.rand() < e:
-                    action = np.random.choice(bandit.arms)
-                else:
-                    max_val = np.max(Q)
-                    action = np.random.choice(np.where(Q == max_val)[0])
-            else:
-                uncertainty = np.log(t) / (N + 0.000001)
+        N = np.ones(n_arms) * 0.000001
+        for t in range(n_timesteps):
+            if act_type == "ucb":
+                uncertainty = np.log(t+1) / N
                 ucb = Q + c * np.sqrt(uncertainty)
                 action = np.argmax(ucb)
-            reward = bandit.reward(action)
+            else:
+                action = np.random.choice(bandit.arms) if np.random.rand() < e else np.argmax(Q)
             N[action] += 1
+            reward = bandit.reward(action, t)
             Q[action] = Q[action] + alpha * (reward - Q[action])
-            reward_grid[b][t-1] = reward
-            if action == optimal_action:
-                optimality_grid[b][t-1] = 1
+            reward_grid[b][t] = reward
+            optimality_grid[b][t] = int(action == optimal_action)
     return reward_grid, optimality_grid
 
 

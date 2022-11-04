@@ -29,8 +29,7 @@ class Bandit:
     def act(self):
         best_true_q = np.max(self.q_true)
         if self.ucb_param is not None:
-            ucb = self.q_estimated + \
-                  self.ucb_param * np.sqrt(np.log(self.t+1)/(self.action_counts + 0.00001))
+            ucb = self.q_estimated + self.ucb_param * np.sqrt(np.log(self.t+1)/(self.action_counts + 0.00001))
             max_val = np.max(ucb)
             action = np.random.choice(np.where(ucb == max_val)[0])
         elif self.is_gradient:

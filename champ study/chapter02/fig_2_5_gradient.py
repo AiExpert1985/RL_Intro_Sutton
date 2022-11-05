@@ -22,8 +22,7 @@ class Bandit:
         return self.rewards[arm][timestep]
 
 
-def simulate(n_bandits=200, n_timesteps=1000, n_arms=10, alpha=0.1, base="no baseline"):
-    q_base = 0 if base == "no baseline" else 5
+def simulate(n_bandits=2000, n_timesteps=1000, n_arms=10, alpha=0.1, base="with baseline", q_base=5):
     reward_grid = np.zeros((n_bandits, n_timesteps))
     optimality_grid = np.zeros((n_bandits, n_timesteps))
     for b in tqdm(range(n_bandits)):
@@ -32,14 +31,14 @@ def simulate(n_bandits=200, n_timesteps=1000, n_arms=10, alpha=0.1, base="no bas
         H = np.zeros(n_arms)
         reward_mean = 0
         for t in range(n_timesteps):
-            H_exp = np.exp(H)
-            Pi = H_exp / np.sum(H_exp)
+            Pi = np.exp(H) / np.sum(np.exp(H))
             action = np.random.choice(bandit.arms, p=Pi)
             reward = bandit.reward(action, t)
             reward_mean += (reward - reward_mean) / (t + 1)
             mask = np.zeros(bandit.n_arms)
             mask[action] = 1
-            H += alpha * (reward - reward_mean) * (mask - Pi)
+            baseline = q_base if base == "with baseline" else 0
+            H += alpha * (reward - baseline) * (mask - Pi)
             reward_grid[b][t] = reward
             optimality_grid[b][t] = int(action == optimal_action)
     return reward_grid, optimality_grid
@@ -47,15 +46,13 @@ def simulate(n_bandits=200, n_timesteps=1000, n_arms=10, alpha=0.1, base="no bas
 
 def fig_2_3():
     fig, ax = plt.subplots(2, 1, figsize=(10, 10))
-    alpha = [0.1, 0.4]
-    base = ["baseline", "no baseline"]
-    for b in base:
-        for a in alpha:
-            rewards, optimality = simulate(alpha=a, base=b)
+    for base in ["with baseline", "no baseline"]:
+        for alpha in [0.1, 0.4]:
+            rewards, optimality = simulate(alpha=alpha, base=base)
             rewards_mean = np.mean(rewards, axis=0)
             optimal_selection = np.mean(optimality, axis=0)
-            ax[0].plot(rewards_mean, label=f'{b}, alpha={a}')
-            ax[1].plot(optimal_selection, label=f'{b}, alpha={a}')
+            ax[0].plot(rewards_mean, label=f'{base}, alpha={alpha}')
+            ax[1].plot(optimal_selection, label=f'{base}, alpha={alpha}')
     ax[0].legend()
     ax[1].legend()
     plt.savefig('images/fig_2_5.jpg')
